@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PCIT\Coding\Service\OAuth;
 
 use Curl\Curl;
-use PCIT\GitHub\Service\OAuth\OAuthInterface;
+use PCIT\GPI\Service\OAuth\OAuthInterface;
 
 class Client implements OAuthInterface
 {
@@ -69,22 +69,50 @@ class Client implements OAuthInterface
 
     public function getLoginUrl(?string $state): string
     {
-        $url = $this->url.http_build_query([
-                'client_id' => $this->clientId,
-                'redirect_uri' => $this->callbackUrl,
-                'response_type' => 'code',
-                'scope' => $this->scope,
-            ]);
+        if (!($this->clientId and $this->clientSecret and $this->callbackUrl)) {
+            return '';
+        }
 
-        return $url;
+        return $this->url.http_build_query([
+            'client_id' => $this->clientId,
+            'redirect_uri' => $this->callbackUrl,
+            'response_type' => 'code',
+            'scope' => $this->scope,
+        ]);
     }
 
     /**
-     * @throws \Exception
+     * @return string|string[]
      */
+    public function getAccessTokenByRefreshToken(string $refresh_token, bool $raw = false)
+    {
+        $json = $this->curl->post(
+            $this->post_url.http_build_query(
+                [
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                    'grant_type' => 'refresh_token',
+                    'refresh_token' => $refresh_token,
+                ]
+            )
+        );
+
+        \Log::debug('Coding AccessToken Raw '.$json);
+
+        if (true === $raw) {
+            return $json;
+        }
+
+        // {"access_token":"f2d0","refresh_token":"45924","expires_in":"692804"}
+
+        return $this->parseTokenResult($json);
+    }
+
     public function getAccessToken(string $code, ?string $state, bool $raw = false): array
     {
-        $json = $this->curl->post($this->post_url.http_build_query([
+        $json = $this->curl->post(
+            $this->post_url.http_build_query(
+                [
                     'client_id' => $this->clientId,
                     'client_secret' => $this->clientSecret,
                     'grant_type' => 'authorization_code',
@@ -106,6 +134,8 @@ class Client implements OAuthInterface
 
     /**
      * 解析服务器返回的结果.
+     *
+     * @param mixed $json
      */
     public function parseTokenResult($json): array
     {

@@ -14,8 +14,6 @@ class WebhooksClient implements WebhooksClientInterface
 
     /**
      * @return mixed
-     *
-     * @throws \Exception
      */
     public function getWebhooks(bool $raw, string $username, string $project)
     {
@@ -44,8 +42,6 @@ class WebhooksClient implements WebhooksClientInterface
      * @param $data
      *
      * @return mixed
-     *
-     * @throws \Exception
      */
     public function setWebhooks($data, string $username, string $repo, ?string $id = null)
     {
@@ -76,13 +72,15 @@ class WebhooksClient implements WebhooksClientInterface
 
     /**
      * @return mixed
-     *
-     * @throws \Exception
      */
     public function unsetWebhooks(string $username, string $repo, string $id)
     {
-        $url = sprintf('/user/%s/project/%s/git/v2/hook/%s',
-        $this->getTeamName(), $username, $id);
+        $url = sprintf(
+            '/user/%s/project/%s/git/v2/hook/%s',
+            $this->getTeamName(),
+            $username,
+            $id
+        );
         $url = $this->api_url.$url.'?'.$this->getAccessTokenUrlParameter();
 
         return $this->curl->delete($url);
